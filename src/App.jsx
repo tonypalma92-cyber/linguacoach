@@ -1,16 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import LessonModal from './components/LessonModal';
+import LessonPlayer from './components/LessonPlayer';
 
 async function loadLessons(){
-  // Lemos do /public para funcionar em produção
-  const res = await fetch('/lessons.json');
+  const res = await fetch('/lessons.json'); // served from public/
   if(!res.ok){ throw new Error('Não foi possível carregar o plano.'); }
   return res.json();
 }
 
 function cx(...xs){ return xs.filter(Boolean).join(' '); }
 function Pill({children, color='bg-indigo-600'}){ return <span className={cx('px-2 py-0.5 rounded-full text-white text-xs', color)}>{children}</span>; }
-function Progress({value}){ return <div className="w-full bg-slate-200 h-2 rounded-full"><div className="h-2 bg-indigo-600 rounded-full" style={{width:`${Math.min(100,Math.max(0,value))}%`}}/></div>; }
+function Progress({value}){ return <div className='w-64 bg-slate-200 h-2 rounded-full'><div className='h-2 bg-indigo-600 rounded-full' style={{width:`${Math.min(100,Math.max(0,value))}%`}}/></div>; }
 
 export default function App(){
   const [all, setAll] = useState([]);
@@ -59,6 +58,17 @@ export default function App(){
   if(loading) return <div style={{padding:20,fontFamily:'system-ui'}}>A carregar…</div>;
   if(err) return <div style={{padding:20,fontFamily:'system-ui', color:'crimson'}}>Erro: {err}</div>;
 
+  // Interactive lesson view
+  if(aberta){
+    return <LessonPlayer
+      item={aberta}
+      onBack={()=>setAberta(null)}
+      onMarkDone={toggleDone}
+      isDone={concluidas.includes(aberta.id)}
+    />;
+  }
+
+  // List view
   return (
     <div className='min-h-screen bg-slate-50'>
       <header className='max-w-6xl mx-auto px-4 py-6 flex items-center justify-between'>
@@ -79,7 +89,7 @@ export default function App(){
         </div>
 
         <div className='flex items-center gap-3 mb-4'>
-          <div className='w-64'><Progress value={(doneCount/Math.max(1,total))*100} /></div>
+          <Progress value={(doneCount/Math.max(1,total))*100} />
           <div>{doneCount}/{total} concluídas (filtro atual)</div>
         </div>
 
@@ -96,36 +106,17 @@ export default function App(){
                   <Pill color='bg-amber-600'>{item.tempo}</Pill>
                 </div>
               </div>
-              <div className='col-span-12 md:col-span-4 text-sm'>
+              <div className='col-span-12 md:col-span-5 text-sm'>
                 <div className='text-slate-500 mb-1'>Vocabulário (PT)</div>
                 <div className='line-clamp-2'>{item.vocabPT}</div>
               </div>
-              <div className='col-span-12 md:col-span-2 text-sm'>
-                <div className='text-slate-500 mb-1'>Gramática</div>
-                <div className='line-clamp-2'>{item.gramatica}</div>
-              </div>
-              <div className='col-span-12 md:col-span-1 flex items-start justify-end gap-2'>
-                <button onClick={()=>setAberta(item)} className='px-3 py-1 rounded-md bg-indigo-600 text-white'>Abrir</button>
-              </div>
-              <div className='col-span-12 pt-2 border-t'>
-                <label className='flex items-center gap-2 text-sm'>
-                  <input type='checkbox' checked={concluidas.includes(item.id)} onChange={()=>toggleDone(item.id)} />
-                  Marcar como concluída
-                </label>
+              <div className='col-span-12 md:col-span-2 flex items-start justify-end gap-2'>
+                <button onClick={()=>setAberta(item)} className='px-3 py-1 rounded-md bg-indigo-600 text-white'>Começar aula</button>
               </div>
             </div>
           ))}
         </div>
       </main>
-
-      {aberta && (
-        <LessonModal
-          item={aberta}
-          onClose={()=>setAberta(null)}
-          onToggleDone={toggleDone}
-          done={concluidas.includes(aberta.id)}
-        />
-      )}
     </div>
   );
 }
