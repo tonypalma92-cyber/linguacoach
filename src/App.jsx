@@ -1,43 +1,31 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import LessonModal from './components/LessonModal';
 
-// Carrega o plano das 180 lições (FR + DE) com tradução PT e tempos verbais
 async function loadLessons(){
+  // Lemos do /public para funcionar em produção
   const res = await fetch('/lessons.json');
   if(!res.ok){ throw new Error('Não foi possível carregar o plano.'); }
   return res.json();
 }
 
 function cx(...xs){ return xs.filter(Boolean).join(' '); }
-
-function Pill({children, color='bg-indigo-600'}){
-  return <span className={cx('px-2 py-0.5 rounded-full text-white text-xs', color)}>{children}</span>;
-}
-
-function Progress({value}){
-  return <div className='w-full bg-slate-200 h-2 rounded-full'>
-    <div className='h-2 bg-indigo-600 rounded-full' style={{width:`${Math.min(100,Math.max(0,value))}%`}}/>
-  </div>;
-}
+function Pill({children, color='bg-indigo-600'}){ return <span className={cx('px-2 py-0.5 rounded-full text-white text-xs', color)}>{children}</span>; }
+function Progress({value}){ return <div className="w-full bg-slate-200 h-2 rounded-full"><div className="h-2 bg-indigo-600 rounded-full" style={{width:`${Math.min(100,Math.max(0,value))}%`}}/></div>; }
 
 export default function App(){
   const [all, setAll] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
-
   const [idioma, setIdioma] = useState('todos'); // 'fr' | 'de' | 'todos'
   const [pesquisa, setPesquisa] = useState('');
+  const [aberta, setAberta] = useState(null);
+
   const [concluidas, setConcluidas] = useState(()=>{
     try{ return JSON.parse(localStorage.getItem('lc_done')||'[]'); }catch{ return []; }
   });
 
   useEffect(()=>{
-    loadLessons().then(d=>{
-      setAll(d.licoes||[]);
-      setLoading(false);
-    }).catch(e=>{
-      setErr(e.message||String(e));
-      setLoading(false);
-    });
+    loadLessons().then(d=>{ setAll(d.licoes||[]); setLoading(false); }).catch(e=>{ setErr(e.message||String(e)); setLoading(false); });
   },[]);
 
   useEffect(()=>{
@@ -66,10 +54,7 @@ export default function App(){
 
   const total = filtered.length;
   const doneCount = filtered.filter(x=>concluidas.includes(x.id)).length;
-
-  const toggleDone = (id) => {
-    setConcluidas(prev => prev.includes(id) ? prev.filter(x=>x!==id) : prev.concat(id));
-  };
+  const toggleDone = (id) => setConcluidas(prev => prev.includes(id)? prev.filter(x=>x!==id) : prev.concat(id));
 
   if(loading) return <div style={{padding:20,fontFamily:'system-ui'}}>A carregar…</div>;
   if(err) return <div style={{padding:20,fontFamily:'system-ui', color:'crimson'}}>Erro: {err}</div>;
@@ -113,17 +98,16 @@ export default function App(){
               </div>
               <div className='col-span-12 md:col-span-4 text-sm'>
                 <div className='text-slate-500 mb-1'>Vocabulário (PT)</div>
-                <div>{item.vocabPT}</div>
+                <div className='line-clamp-2'>{item.vocabPT}</div>
               </div>
               <div className='col-span-12 md:col-span-2 text-sm'>
                 <div className='text-slate-500 mb-1'>Gramática</div>
-                <div>{item.gramatica}</div>
+                <div className='line-clamp-2'>{item.gramatica}</div>
               </div>
-              <div className='col-span-12 md:col-span-1'>
-                <div className='text-slate-500 mb-1 text-sm'>Exercício</div>
-                <div className='text-xs'>{item.exercicio}</div>
+              <div className='col-span-12 md:col-span-1 flex items-start justify-end gap-2'>
+                <button onClick={()=>setAberta(item)} className='px-3 py-1 rounded-md bg-indigo-600 text-white'>Abrir</button>
               </div>
-              <div className='col-span-12 md:col-span-12 flex items-center justify-between pt-2 border-t'>
+              <div className='col-span-12 pt-2 border-t'>
                 <label className='flex items-center gap-2 text-sm'>
                   <input type='checkbox' checked={concluidas.includes(item.id)} onChange={()=>toggleDone(item.id)} />
                   Marcar como concluída
@@ -133,6 +117,15 @@ export default function App(){
           ))}
         </div>
       </main>
+
+      {aberta && (
+        <LessonModal
+          item={aberta}
+          onClose={()=>setAberta(null)}
+          onToggleDone={toggleDone}
+          done={concluidas.includes(aberta.id)}
+        />
+      )}
     </div>
   );
 }
